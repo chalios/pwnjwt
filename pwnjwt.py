@@ -89,10 +89,13 @@ class JWToken(object):
         sp.check_call(['rm', fname])
 
     def forge(self, payload):
-        if type(payload) is str:
-            payload = json.loads(payload)
-        return jwt.encode(payload, self.key, algorithm=self.algo).decode('utf-8')
-
+        if self.key:
+            if type(payload) is str:
+                payload = json.loads(payload)
+            return jwt.encode(payload, self.key, algorithm=self.algo).decode('utf-8')
+        else:
+            print('Impossible to forge without key')
+            return None
 
 def main():
     parser = ArgumentParser(description='Crack and/or Forge JSON Web Tokens (JWT)',
