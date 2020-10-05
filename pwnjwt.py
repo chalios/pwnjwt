@@ -91,7 +91,7 @@ class JWToken(object):
     def forge(self, payload):
         if type(payload) is str:
             payload = json.loads(payload)
-        return jwt.encode(payload, self.key, algorithm=self.algo)
+        return jwt.encode(payload, self.key, algorithm=self.algo).decode('utf-8')
 
 
 def main():
@@ -124,7 +124,7 @@ def main():
 
     if args.forge:
         print('')
-        print(f'New Token: {token.forge(args.forge).decode("utf-8")}')
+        print(f'New Token: {token.forge(args.forge)}')
         print('')
 
     print(f'''
