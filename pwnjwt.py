@@ -79,7 +79,6 @@ class JWToken(object):
         def cracked_key():
             out = sp.check_output(['john', fname, '--show', format_arg()]).decode('utf-8')
             if '0 left' in out:
-                print(out.split('\n')[0].replace('?:', ''))
                 return out.split('\n')[0].replace('?:', '')
             return None
 
@@ -178,11 +177,11 @@ def main():
 
     def show_details(token):
         print(f'''
-    Token     : {token.encoded}
-    Header    : {token.header} ({token.encoded_header})
-    Payload   : {token.payload} ({token.encoded_payload})
-    Algorithm : {token.algo}
-    Key       : {token.key}
+Token     : {token.encoded}
+Header    : {token.header} ({token.encoded_header})
+Payload   : {token.payload} ({token.encoded_payload})
+Algorithm : {token.algo}
+Key       : {token.key}
         ''')
 
     token = get_token()
