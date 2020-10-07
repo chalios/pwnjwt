@@ -9,13 +9,15 @@ import string
 import subprocess as sp
 
 from argparse import ArgumentParser
-from pathlib import Path
 
+# Shared functions -------------------------------------------------------------
 def get_random_string(length):
     letters = string.ascii_lowercase
     return ''.join(random.choice(letters) for i in range(length))
+# ------------------------------------------------------------------------------
 
 
+# JWToken Class ----------------------------------------------------------------
 class JWToken(object):
     def __init__(self, token, key=None):
         try:
@@ -121,13 +123,15 @@ class JWToken(object):
 
         # Any other case we need a key
         if self.key:
-            if algo and not algo == 'None':
+            if algo: # Will never be 'None'. Handled earlier.
                 return jwt.encode(payload, self.key, algorithm=algo).decode('utf-8')
             return jwt.encode(payload, self.key, algorithm=self.algo).decode('utf-8')
         else:
             print('Impossible to forge without key')
             return None
+# ------------------------------------------------------------------------------
 
+# Standalone -------------------------------------------------------------------
 def main():
     parser = ArgumentParser(description='Crack and/or Forge JSON Web Tokens (JWT)',
                             epilog='Use it at your own risk. Do not do stupid or illegal stuff. You are responsible of what you do.')
@@ -199,3 +203,4 @@ Key       : {token.key}
 
 if __name__ == '__main__':
     main()
+# ------------------------------------------------------------------------------
