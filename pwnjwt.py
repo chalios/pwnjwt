@@ -187,12 +187,12 @@ def main():
     token = get_token()
 
     if not token.key and args.bruteforce:
-        bruteforce()
+        bruteforce(token)
 
-    show_details()
+    show_details(token)
 
     if args.forge:
-        forge()
+        forge(token)
 
 
 
