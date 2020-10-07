@@ -44,7 +44,7 @@ class JWToken(object):
 
     def set_key(self, key):
         if os.path.exists(key):
-            key = open(args.key, 'r').read()
+            key = open(key, 'r').read()
 
         if self._is_valid(key):
             self.key = key
