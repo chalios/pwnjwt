@@ -178,10 +178,11 @@ def main():
 
     def show_details(token):
         print(f'''
-        Token:     {token.encoded}
-        Payload:   {token.payload}
-        Algorithm: {token.algo}
-        Key:       {token.key}
+    Token     : {token.encoded}
+    Header    : {token.header} ({token.encoded_header})
+    Payload   : {token.payload} ({token.encoded_payload})
+    Algorithm : {token.algo}
+    Key       : {token.key}
         ''')
 
     token = get_token()
