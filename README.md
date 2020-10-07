@@ -80,7 +80,7 @@ Algorithm : HS256
 Key       : Sn1f
 ```
 
-Or if key isn't found :
+Or if key wasn't found :
 ```
 [*] Starting Bruteforce with John using /usr/share/wordlists/rockyou.txt.
 [-] Key not found.

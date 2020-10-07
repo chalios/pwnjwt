@@ -43,6 +43,9 @@ class JWToken(object):
             raise e
 
     def set_key(self, key):
+        if os.path.exists(key):
+            key = open(args.key, 'r').read()
+
         if self._is_valid(key):
             self.key = key
         else:
@@ -141,8 +144,6 @@ def main():
 
     def get_token():
         if args.key:
-            if os.path.exists(args.key): # If argument value is a file
-                return JWToken(args.token, key=open(args.key, 'r').read())
             return JWToken(args.token, key=args.key)
         return JWToken(args.token)
 
